@@ -1,0 +1,55 @@
+import React, { useState } from "react";
+import Navbar from "../components/Navbar.jsx";
+import Sidebar from "../components/Sidebar.jsx";
+import CodeEditor from "../components/CodeEditor.jsx";
+
+export default function Dashboard() {
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-950 text-white">
+      <Navbar />
+
+      <div className="flex flex-1 overflow-hidden">
+
+        <Sidebar
+          selectedRoom={selectedRoom}
+          selectedFile={selectedFile}
+          onSelectRoom={(room) => {
+            setSelectedRoom(room);
+            // Clear the selected file when the room changes
+            setSelectedFile(null); 
+          }}
+          onSelectFile={(file) => {
+            setSelectedFile(file);
+          }}
+        />
+
+        <div className="flex-1 overflow-hidden">
+          {/* Use conditional rendering to show the correct view based
+            on whether a room and/or a file is selected.
+          */}
+          {!selectedRoom ? (
+            // 1. No room selected
+            <div className="flex items-center justify-center h-full text-gray-400 text-lg">
+              Welcome! Select or create a room to start coding.
+            </div>
+          ) : !selectedFile ? (
+            // 2. Room selected, but no file
+            <div className="flex items-center justify-center h-full text-gray-400 text-lg">
+              Select a file to start editing.
+            </div>
+          ) : (
+            // 3. Both room and file are selected
+            <CodeEditor
+              key={selectedFile.id}
+              file={selectedFile}
+              onSaved={(updatedFile) => setSelectedFile(updatedFile)}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
