@@ -32,7 +32,7 @@ export default function CodeEditor({ file, onSaved }) {
   const isDirtyRef = useRef(isDirty);
 
   const useYjs = import.meta.env.VITE_USE_YJS === "true";
-  const yjsUrl = import.meta.env.VITE_YJS_WEBSOCKET_URL || "ws://localhost:1234";
+  const yjsUrl = import.meta.env.VITE_YJS_WEBSOCKET_URL;
   const AUTO_SAVE_INTERVAL_MS = 10000;
 
   // --- NEW: Refs for stale props ---
