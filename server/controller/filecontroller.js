@@ -72,7 +72,7 @@ export const updateFile = async (req, res) => {
     updates.updatedAt = Date.now();
 
     const updated = await File.findByIdAndUpdate(id, updates, { new: true }).lean();
-    console.log("File updated:", updated);
+    console.log("File updated:");
     // Emit socket event to room so other collaborators know about the update
     try {
       const io = req.app?.locals?.io;

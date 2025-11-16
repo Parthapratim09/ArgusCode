@@ -217,7 +217,7 @@ export default function CodeEditor({ file, onSaved }) {
       setIsDirty(false);
       setStatus("saved");
       onSavedRef.current && onSavedRef.current(saved); 
-      console.log("File saved", saved);
+  
       setTimeout(() => setStatus("idle"), 700);
       return saved;
     } catch (err) {
