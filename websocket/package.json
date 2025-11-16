@@ -10,9 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node start.js"
   },
-  "dependencies": {
-    "@y/websocket-server": "^0.1.1",
-    "ws": "^8.18.0"
-
-  }
+ "dependencies": {
+  "@y/websocket-server": "^1.4.0",
+  "ws": "^8.18.0"
+}
 }
