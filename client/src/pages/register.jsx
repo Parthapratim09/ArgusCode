@@ -23,7 +23,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { useTheme } from '@mui/material/styles';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 
 function CustomUsernameField({ value, onChange }) {
   return (
@@ -124,7 +124,7 @@ function SignInLink() {
   return (
     <Typography variant="body2">
       Already have an account?{' '}
-      <Link component={RouterLink} to="/login" variant="body2" underline="hover">
+      <Link href="/login" variant="body2" underline="hover">
         Login
       </Link>
     </Typography>
