@@ -139,12 +139,18 @@ export default function CodeEditor({ file, onSaved }) {
             console.error("Failed to fetch file content", err); content = "";
           }
         }
-        provider.on('sync', (isSynced) => {
-          if (isSynced && ytext.length === 0 && content) {
-            console.log(`Applying initial server content to ${room}`);
-            ytext.insert(0, content);
-          }
-        });
+        // provider.on('sync', (isSynced) => {
+        //   if (isSynced && ytext.length === 0 && content) {
+        //     console.log(`Applying initial server content to ${room}`);
+        //     ytext.insert(0, content);
+        //   }
+        // });
+provider.on('sync', (isSynced) => {
+          if (isSynced && ytext.length === 0 && content) {
+            console.log(`Applying initial server content to ${room}`);
+            ytext.insert(0, content);
+          }
+        });
       }
       const { ytext, provider } = connection;
       monaco.editor.setModelLanguage(modelRef.current, detected);

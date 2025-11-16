@@ -26,7 +26,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import api from "../api/axios.js";
 import { io } from "socket.io-client";
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL;
+const SOCKET_SERVER_URL = import.meta.env.VITE_API_SOCKET_URL;
 
 export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, selectedFile }) {
   const [rooms, setRooms] = useState([]);
@@ -40,7 +40,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
   useEffect(() => {
     // create socket once
     socketRef.current = io(SOCKET_SERVER_URL, {
-      transports: ["websocket"],
+      // transports: ["websocket"],
     });
 
     // generic listeners 
