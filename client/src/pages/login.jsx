@@ -23,6 +23,7 @@ import { useContext } from 'react';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import { AuthContext } from '../context/authContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useState } from 'react';
 
 const providers = [{ id: 'credentials', name: 'Email and Password' }];
@@ -96,7 +97,7 @@ function SignUpLink() {
   return (
     <>
       <span>New user..? </span>
-      <Link href="/register" variant="body2" underline="none">Register</Link>
+      <Link component={RouterLink} to="/register" variant="body2" underline="none">Register</Link>
     </>
   );
 }
