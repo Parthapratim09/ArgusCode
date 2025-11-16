@@ -25,6 +25,7 @@ import { AuthContext } from '../context/authContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
+
 const providers = [{ id: 'credentials', name: 'Email and Password' }];
 
 function CustomEmailField() {
