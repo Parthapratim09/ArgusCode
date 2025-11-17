@@ -1,5 +1,5 @@
 {
-  "name": "websocket-server",
+  "name": "websocket_server",
   "version": "1.0.0",
   "scripts": {
     "start": "node node_modules/y-websocket/bin/server.js --port $PORT"
