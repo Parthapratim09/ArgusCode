@@ -36,11 +36,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/files", fileRoutes);
 
-// --- Socket.io and HTTP Server Setup ---
 
 const httpServer = http.createServer(app);
 
-// create socket.io server
+
 const io = new IOServer(httpServer, {
   cors: {
     origin: process.env.CLIENT_ORIGIN, 
@@ -48,7 +47,6 @@ const io = new IOServer(httpServer, {
   },
 });
 
-// basic socket handlers
 io.on("connection", (socket) => {
   // console.log("Socket connected:", socket.id);
   console.log("Socket connected");
@@ -70,10 +68,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// attach io so controllers can emit events
+
 app.locals.io = io;
 
-// start server using ONLY httpServer
+
 const PORT = process.env.PORT;
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

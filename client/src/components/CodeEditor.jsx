@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
-import api from "../api/axios.js"; // your axios wrapper
+import api from "../api/axios.js"; 
 import { Button, Select, MenuItem, Typography } from "@mui/material";
 
 import * as Y from "yjs";
@@ -23,24 +23,23 @@ export default function CodeEditor({ file, onSaved }) {
   const bindingRef = useRef(null);
   const yjsConnectionsRef = useRef(new Map());
 
-  // Save lock & debounce
+
   const savingRef = useRef(false);
   const dirtyDebounceRef = useRef(null);
   const autosaveRef = useRef(null);
   
-  // Ref to track isDirty state
   const isDirtyRef = useRef(isDirty);
 
   const useYjs = import.meta.env.VITE_USE_YJS === "true";
   const yjsUrl = import.meta.env.VITE_YJS_WEBSOCKET_URL;
   const AUTO_SAVE_INTERVAL_MS = 10000;
 
-  // --- NEW: Refs for stale props ---
+
   const fileRef = useRef(file);
   const onSavedRef = useRef(onSaved);
   const useYjsRef = useRef(useYjs);
 
-  // --- NEW: Effect to keep refs in sync ---
+  
   useEffect(() => {
     fileRef.current = file;
     onSavedRef.current = onSaved;
@@ -81,7 +80,7 @@ export default function CodeEditor({ file, onSaved }) {
     }
   }
 
-  // This useEffect (for file switching) remains unchanged
+
   useEffect(() => {
     cleanupBinding();
     if (!editorReady || !modelRef.current) {
@@ -139,12 +138,7 @@ export default function CodeEditor({ file, onSaved }) {
             console.error("Failed to fetch file content", err); content = "";
           }
         }
-        // provider.on('sync', (isSynced) => {
-        //   if (isSynced && ytext.length === 0 && content) {
-        //     console.log(`Applying initial server content to ${room}`);
-        //     ytext.insert(0, content);
-        //   }
-        // });
+        
 provider.on('sync', (isSynced) => {
           if (isSynced && ytext.length === 0 && content) {
             console.log(`Applying initial server content to ${room}`);
@@ -167,10 +161,10 @@ provider.on('sync', (isSynced) => {
       );
       setIsDirty(false);
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [file, editorReady, useYjs, yjsUrl]);
 
-  // handleEditorDidMount remains unchanged
+  
   function handleEditorDidMount(editor, monacoInstance) {
     editorRef.current = editor;
     modelRef.current = editor.getModel();
@@ -191,7 +185,7 @@ provider.on('sync', (isSynced) => {
     setEditorReady(true);
   }
 
-  // ---------- Save (NOW USES REFS) ----------
+
   async function handleSave() {
     const currentFile = fileRef.current;
     
@@ -235,7 +229,7 @@ provider.on('sync', (isSynced) => {
     }
   }
 
-  // startAutosave remains unchanged
+  
   function startAutosave() {
     clearInterval(autosaveRef.current);
     autosaveRef.current = setInterval(() => {
@@ -245,12 +239,12 @@ provider.on('sync', (isSynced) => {
     }, AUTO_SAVE_INTERVAL_MS);
   }
 
-  // isDirtyRef effect remains unchanged
+  
   useEffect(() => {
     isDirtyRef.current = isDirty;
   }, [isDirty]);
 
-  // Unmount cleanup remains unchanged
+  
   useEffect(() => {
     return () => {
       clearInterval(autosaveRef.current);
@@ -266,10 +260,10 @@ provider.on('sync', (isSynced) => {
       });
       yjsConnectionsRef.current.clear();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, []);
 
-  // runCode remains unchanged
+  
   const [output, setOutput] = useState("Output will appear here...");
   const runCode = async () => {
     setOutput("⏳ Running code...");
@@ -306,7 +300,7 @@ provider.on('sync', (isSynced) => {
     }
   };
 
-  // handleLanguageChange remains unchanged
+  
   function handleLanguageChange(e) {
     const newLang = e.target.value;
     setLanguage(newLang);
@@ -315,7 +309,7 @@ provider.on('sync', (isSynced) => {
     }
   }
 
-  // JSX return remains unchanged
+
   return (
     <div className="flex flex-col w-full h-full bg-slate-950 text-gray-100">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">

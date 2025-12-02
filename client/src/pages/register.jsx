@@ -160,7 +160,7 @@ export default function Register() {
       navigate("/login");
     //   setTimeout(() => navigate("/verify",{state:{email:formData.email}}), 500);
     } catch (err) {
-      setError(err.response?.data?.msg || "Registration failed. Please try again.");
+      setError(err.response?.data?.message ||err.message|| "Registration failed. Please try again.");
     }
   };
 
@@ -193,7 +193,7 @@ export default function Register() {
 
             {error && <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>}
 
-            <CustomUsernameField value={formData.username} onChange={handleChange} />
+            <CustomUsernameField value={formData.name} onChange={handleChange} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>  
             <CustomEmailField value={formData.email} onChange={handleChange} />
             </Box>

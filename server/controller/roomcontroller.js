@@ -28,6 +28,7 @@ export const createRoom= async(req,res)=>{
              owner: req.user.id,
              slug });
         await newRoom.save();
+        await newRoom.populate("owner", "name email");
         res.status(201).json({ message: "Room created successfully", room: newRoom });
     }catch(error){
         res.status(500).json({ message: "Error creating room", error });
@@ -78,8 +79,11 @@ export const deleteRoom = async (req, res) => {
       return res.status(403).json({ message: "Only owner can delete this room" });
     }
 
-    // OPTIONAL: check for edited files / collaborators before delete
-    // If you implement File model later, check here for edited files or other conditions.
+    if (room.users.length > 0) {
+      return res.status(400).json({ 
+        message: "Cannot delete room while collaborators are still inside. Ask them to leave first." 
+      });
+    }
 
     await Room.findByIdAndDelete(id);
     return res.json({ message: "Room deleted successfully" });
@@ -92,7 +96,7 @@ export const deleteRoom = async (req, res) => {
 export const getAllRooms = async (req, res) => {
   try {
     const userId = req.user.id;
-    // return rooms where user is owner OR a member
+    
     const rooms = await Room.find({
       $or: [{ owner: userId }, { users: userId }]
     }).populate('owner', 'name email').populate('users', 'name email');
@@ -101,5 +105,31 @@ export const getAllRooms = async (req, res) => {
   } catch (err) {
     console.error("getAllRooms error:", err);
     return res.status(500).json({ message: "Server error fetching rooms" });
+  }
+};
+
+
+export const leaveRoom = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const room = await Room.findOne({ roomId });
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    if (room.owner.toString() === req.user.id) {
+      return res.status(400).json({ message: "Owner cannot leave their own room. You can delete it instead." });
+    }
+
+    
+    room.users = room.users.filter(userId => userId.toString() !== req.user.id);
+    await room.save();
+
+    return res.status(200).json({ message: "You left the room successfully" });
+
+  } catch (error) {
+    console.error("leaveRoom error:", error);
+    return res.status(500).json({ message: "Error leaving room" });
   }
 };

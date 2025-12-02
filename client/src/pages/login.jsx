@@ -145,10 +145,10 @@ export default function Login() {
 
       setTimeout(() => {
       navigate("/");
-    }, 800);
+    }, 500);
 
     } catch (error) {
-      showSnackbar(`${error.response?.data?.msg || error.message}`, "error");
+      showSnackbar(`${error.response?.data?.message || error.message}`, "error");
 
     }
   };

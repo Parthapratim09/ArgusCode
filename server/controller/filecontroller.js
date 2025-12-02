@@ -7,7 +7,7 @@ export const createFile = async (req, res) => {
     const language = detectLanguageFromName(name);
     const file = await File.create({ roomId, name, content, language, owner: req.user.id });
 
-    // emit to socket room so other collaborators can update UI
+  
     try {
       const io = req.app.locals.io;
       if (io) io.to(`room-${roomId}`).emit(`file-created:${roomId}`, file);
@@ -58,13 +58,13 @@ export const updateFile = async (req, res) => {
       return res.status(400).json({ message: "File id missing" });
     }
 
-    // find file first (so we know roomId)
+    
     const existing = await File.findById(id);
     if (!existing) {
       return res.status(404).json({ message: "File not found" });
     }
 
-    // Apply updates. Don't overwrite name/content with undefined.
+
     const updates = {};
     if (typeof content !== "undefined") updates.content = content;
     // if (typeof name !== "undefined") updates.name = name;
@@ -73,7 +73,7 @@ export const updateFile = async (req, res) => {
 
     const updated = await File.findByIdAndUpdate(id, updates, { new: true }).lean();
     console.log("File updated:");
-    // Emit socket event to room so other collaborators know about the update
+    
     try {
       const io = req.app?.locals?.io;
       if (io && updated && updated.roomId) {
@@ -108,7 +108,7 @@ req.app.locals.io?.to(`room-${file.roomId}`).emit(`file-deleted:${file.roomId}`,
 
 
 
-// helper; add to same file or utils
+
 function detectLanguageFromName(name = "") {
   const ext = name.split(".").pop().toLowerCase();
   const map = {

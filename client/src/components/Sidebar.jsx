@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef,useContext } from "react";
+import { AuthContext } from "../context/authContext.jsx";
 import {
   Button,
   Typography,
@@ -16,6 +17,7 @@ import {
   Tooltip,
   Collapse,
   Divider,
+  Snackbar,  Alert,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AddIcon from "@mui/icons-material/Add";
@@ -29,6 +31,17 @@ import { io } from "socket.io-client";
 const SOCKET_SERVER_URL = import.meta.env.VITE_API_SOCKET_URL;
 
 export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, selectedFile }) {
+  const {user}=useContext(AuthContext);
+  const [snackbar, setSnackbar] = useState({   
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const showSnackbar = (message, severity = "info") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
   const [rooms, setRooms] = useState([]);
   const [filesByRoom, setFilesByRoom] = useState({});
   const [expandedRoomId, setExpandedRoomId] = useState(null);
@@ -38,12 +51,11 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // create socket once
+
     socketRef.current = io(SOCKET_SERVER_URL, {
       // transports: ["websocket"],
     });
 
-    // generic listeners 
     socketRef.current.on("connect", () => {
       console.log("Socket connected:", socketRef.current.id);
     });
@@ -59,7 +71,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     };
   }, []);
 
-  // load room list on mount
+ 
   useEffect(() => {
     (async () => {
       try {
@@ -72,7 +84,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     })();
   }, []);
 
-  // when a room is selected/expanded, fetch files for that room (if not cached)
+
   const fetchFilesForRoom = async (room) => {
     if (!room) return;
     const roomId = room.roomId;
@@ -89,21 +101,21 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     }
   };
 
-  // ----- START: NEW SOCKET LOGIC HOOK -----
+  
   useEffect(() => {
-    // when selectedRoom changes, subscribe to room events
+    
     if (!selectedRoom) return;
 
     const id = selectedRoom.roomId;
     const socket = socketRef.current; 
     if (!socket) return; 
 
-    // tell server socket
+    
     socket.emit("join-room", id);
 
-    // listen to file events for this room
+    
     const fileCreatedHandler = (file) => {
-      // Adapted for your filesByRoom state
+      
       setFilesByRoom(prev => {
         const currentFiles = prev[id] || [];
         if (currentFiles.some(f => f._id === file._id)) return prev;
@@ -115,7 +127,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     };
 
     const fileUpdatedHandler = (file) => {
-      // Adapted for your filesByRoom state
+      
       setFilesByRoom(prev => {
         const currentFiles = prev[id] || [];
         const exists = currentFiles.some(f => f._id === file._id);
@@ -126,14 +138,14 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
         return { ...prev, [id]: updatedList };
       });
 
-      // if this file is currently open in editor, update editor content:
+      
       if (selectedFile && selectedFile._id === file._id) {
         onSelectFile(file);
       }
     };
 
     const fileDeletedHandler = (fileId) => {
-      // Adapted for your filesByRoom state
+      
       setFilesByRoom(prev => {
         const currentFiles = prev[id] || [];
         return {
@@ -147,12 +159,12 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
       }
     };
 
-    // Attach listeners
+
+  
     socket.on(`file-created:${id}`, fileCreatedHandler);
     socket.on(`file-updated:${id}`, fileUpdatedHandler);
     socket.on(`file-deleted:${id}`, fileDeletedHandler);
 
-    // cleanup
     return () => {
       socket.emit("leave-room", id);
       socket.off(`file-created:${id}`, fileCreatedHandler);
@@ -161,35 +173,33 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     };
 
   }, [selectedRoom, selectedFile, onSelectFile, setFilesByRoom, socketRef]);
-  // ----- END: NEW SOCKET LOGIC HOOK -----
 
 
-  // ----- START: MODIFIED toggleExpand -----
-  // toggle expand for room (dropdown behavior)
+
+
+
   const toggleExpand = (room) => {
     const id = room.roomId;
     if (expandedRoomId === id) {
       setExpandedRoomId(null);
     } else {
       setExpandedRoomId(id);
-      // fetch files if not fetched yet
+      
       if (!filesByRoom[id]) fetchFilesForRoom(room);
       
-      // All socket logic was removed from here
+      
     }
   };
-  // ----- END: MODIFIED toggleExpand -----
 
-  // copy roomId
+
   const copyRoomId = async (roomId) => {
     try {
       await navigator.clipboard.writeText(roomId);
     } catch {
-      alert("Unable to copy");
+      showSnackbar("Unable to copy","error");
     }
   };
 
-  // Create room (immediate show)
   const createRoom = async () => {
     const name = prompt("Enter new room name:");
     if (!name) return;
@@ -198,18 +208,16 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
       const createdRoom = data?.room || data;
       setRooms((prev) => [createdRoom, ...prev]);
       onSelectRoom && onSelectRoom(createdRoom);
-      // expand newly created
+      
       setExpandedRoomId(createdRoom.roomId);
       fetchFilesForRoom(createdRoom);
-      // No need to emit 'join-room' here, the new useEffect
-      // will handle it when 'selectedRoom' changes.
+      
     } catch (err) {
       console.error("Room creation failed", err?.message || err);
-      alert(err?.response?.data?.message || "Failed to create room");
+      showSnackbar(err?.response?.data?.message || "Failed to create room","error");
     }
   };
 
-  // Join by short room ID
   const openJoin = () => {
     setJoinRoomInput("");
     setJoinOpen(true);
@@ -221,7 +229,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     try {
       const { data } = await api.post(`/rooms/${joinRoomInput}/join`);
       const joined = data?.room || data;
-      // add to rooms list if not present
+      
       setRooms((prev) => {
         if (prev.some((r) => r.roomId === joined.roomId)) return prev;
         return [joined, ...prev];
@@ -229,19 +237,54 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
       onSelectRoom && onSelectRoom(joined);
       setExpandedRoomId(joined.roomId);
       fetchFilesForRoom(joined);
-      // No need to emit 'join-room' here, the new useEffect
-      // will handle it when 'selectedRoom' changes.
+     
       closeJoin();
     } catch (err) {
       console.error("Join failed:", err?.response?.data || err?.message || err);
-      alert(err?.response?.data?.message || "Failed to join room");
+      showSnackbar(err?.response?.data?.message || "Failed to join room","error");
     }
-  };
+  }
+  // Delete room
+    const deleteRoom = async (room) => {
+  if (!confirm("Are you sure? This will permanently delete the room.")) return;
 
-  // Add file to selected room (uses short roomId string)
+  try {
+    await api.delete(`/rooms/${room._id}`);
+    setRooms((prev) => prev.filter((r) => r._id !== room._id));
+
+    if (selectedRoom?._id === room._id) {
+      onSelectRoom(null);
+      onSelectFile(null);
+    }
+
+    showSnackbar("Room deleted successfully","success");
+  } catch (err) {
+    showSnackbar(err?.response?.data?.message || "Cannot delete room","error");
+  }
+};
+
+const leaveRoom = async (room) => {
+  if (!confirm("Leave this room? You will lose access.")) return;
+
+  try {
+    await api.post(`/rooms/${room.roomId}/leave`);
+    setRooms((prev) => prev.filter((r) => r.roomId !== room.roomId));
+
+    if (selectedRoom?.roomId === room.roomId) {
+      onSelectRoom(null);
+      onSelectFile(null);
+    }
+
+    showSnackbar("Left room successfully","success");
+  } catch (err) {
+    showSnackbar(err?.response?.data?.message || "Failed to leave room","error");
+  }
+};
+;
+
   const addFile = async (room) => {
     if (!room) {
-      alert("Select a room first");
+      showSnackbar("Select a room first","warning");
       return;
     }
     const name = prompt("New file name (e.g. main.py):");
@@ -252,19 +295,16 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
       const created = data?.file || data;
       if (!created) throw new Error("Invalid file response");
 
-      // update local map with dedupe
       setFilesByRoom((prev) => {
         const list = prev[room.roomId] || [];
         const filtered = list.filter((f) => f._id !== created._id);
         return { ...prev, [room.roomId]: [created, ...filtered] };
       });
 
-      // notify editor selection
       onSelectFile && onSelectFile(created);
-      // emit to server not required (server will broadcast via controller)
     } catch (err) {
       console.error("Add file error:", err?.message || err);
-      alert(err?.response?.data?.message || "Failed to create file");
+      showSnackbar(err?.response?.data?.message || "Failed to create file","error");
     }
   };
 
@@ -274,17 +314,14 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
     if (!confirm(`Delete file "${file.name}"? This cannot be undone.`)) return;
     try {
       await api.delete(`/files/${file._id}`);
-      // No need to update state manually, the socket
-      // event 'file-deleted' will handle it.
       
-      // We only need to deselect the file if it's the one we deleted
+
       if (selectedFile && selectedFile._id === file._id) {
          onSelectFile && onSelectFile(null);
       }
-      // server will broadcast deletion event as well
     } catch (err) {
       console.error("Delete file failed:", err?.message || err);
-      alert(err?.response?.data?.message || "Failed to delete file");
+      showSnackbar(err?.response?.data?.message || "Failed to delete file","error");
     }
   };
 
@@ -323,6 +360,8 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
               const selected = selectedRoom && (selectedRoom._id === room._id || selectedRoom.roomId === room.roomId);
               const expanded = expandedRoomId === room.roomId;
               const files = filesByRoom[room.roomId] || [];
+               const isOwner = room.owner?._id === user?.id;
+               console.log("Room owner ID:", room.owner?._id, "Current user ID:", user?.id);
               return (
                 <Box key={room._id || room.roomId} sx={{ mb: 1 }}>
                   <ListItemButton
@@ -362,6 +401,35 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
 
                   <Collapse in={expanded} timeout="auto" unmountOnExit>
                     <Box sx={{ px: 1, pt: 1 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      {room.owner._id === user.id ? (
+                      <Button
+                      size="small"
+                      color="error"
+                      variant="contained"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteRoom(room);
+                      }}
+                    >
+                    Delete Room
+                    </Button>
+                  ) : (
+                  <Button
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      leaveRoom(room);
+                    }}
+                  >
+                    Leave Room
+                  </Button>
+                )}
+              </Box>
+              <Divider sx={{ borderColor: "#1f2937", mb: 1 }} />
+
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
                         <Typography variant="subtitle2" sx={{ color: "#94a3b8" }}>
                           Files
@@ -432,6 +500,22 @@ export default function Sidebar({ selectedRoom, onSelectRoom, onSelectFile, sele
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}   
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
     </div>
   );
 }
