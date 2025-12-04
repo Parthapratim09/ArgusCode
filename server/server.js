@@ -10,9 +10,13 @@ import http from "http";
 import { Server as IOServer } from "socket.io";
 
 dotenv.config();
-
+const corsOptions = {
+    origin: process.env.CLIENT_ORIGIN,
+    credentials: true, 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+};
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
