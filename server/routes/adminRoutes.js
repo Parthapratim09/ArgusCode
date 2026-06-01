@@ -1,7 +1,7 @@
 import express from "express";
 
 import { authMiddleware } from "../middleware/authMiddleware.js";
-import { isAdmin } from "../middleware/adminMiddleware.js";
+import { isAdmin } from "../middleware/adminmiddleware.js";
 import User from "../models/User.js";
 import Room from "../models/Room.js";
 import File from "../models/Files.js";
