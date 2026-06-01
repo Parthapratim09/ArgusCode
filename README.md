@@ -1,6 +1,6 @@
 # ArgusCode - Real-Time Collaborative Coding Platform
 
-![ArgusCode Logo](./assets/logo.png)
+live link https://arguscode.onrender.com
 
 ## 🚀 About ArgusCode
 
