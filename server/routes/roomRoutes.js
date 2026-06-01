@@ -1,6 +1,6 @@
 import express from "express";
 import { createRoom, getRoom,joinRoom,updateRoom,deleteRoom,getAllRooms,leaveRoom,updateUserRole,kickUserFromRoom} from "../controller/roomcontroller.js";
-import { authMiddleware} from "../middleware/authmiddleware.js";
+import { authMiddleware} from "../middleware/authMiddleware.js";
 import { requireRoomRole } from "../middleware/roomRoleMiddleware.js";
 import { roomOwnerOnly as roomOwnerMiddleware } from "../middleware/roomOwnerOnly.js";
 

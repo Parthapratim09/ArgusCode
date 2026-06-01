@@ -1,6 +1,6 @@
 import express from "express";
 import { createFile, getFilesByRoom, updateFile,getFileById, deleteFile,createFolder } from "../controller/filecontroller.js";
-import { authMiddleware } from "../middleware/authmiddleware.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 import { requireRoomRole } from "../middleware/roomRoleMiddleware.js";
 import { canEditFile } from "../middleware/filePermissionMiddleware.js";
 
