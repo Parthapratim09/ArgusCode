@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   FormControl,
@@ -12,176 +14,280 @@ import {
   Box,
   Snackbar,
   Alert,
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  Paper,
+  Grid,
 } from '@mui/material';
 
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { AppProvider } from '@toolpad/core/AppProvider';
-import { SignInPage } from '@toolpad/core/SignInPage';
-import { useTheme } from '@mui/material/styles';
-import { useContext } from 'react';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+
 import { AuthContext } from '../context/authContext.jsx';
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 
+const loginTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    background: {
+      default: '#020617', 
+      paper: '#0f172a',   
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#94a3b8',
+    },
+    primary: {
+      main: '#14b8a6', 
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+  },
+});
 
-const providers = [{ id: 'credentials', name: 'Email and Password' }];
-
-function CustomEmailField() {
-  return (
-    <TextField
-      label="Email"
-      name="email"
-      type="email"
-      size="small"
-      required
-      fullWidth
-      slotProps={{
-        input: {
-          startAdornment: (
-            <InputAdornment position="start">
-              <MailOutlinedIcon fontSize="inherit" />
-            </InputAdornment>
-          ),
-        },
-      }}
-      variant="outlined"
-    />
-  );
-}
-
-function CustomPasswordField() {
-  const [showPassword, setShowPassword] = React.useState(false);
+export default function Login() {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
   const handleMouseDownPassword = (event) => event.preventDefault();
 
-  return (
-    <FormControl sx={{ my: 2 }} fullWidth variant="outlined">
-      <InputLabel size="small" htmlFor="outlined-adornment-password">
-        Password
-      </InputLabel>
-      <OutlinedInput
-        id="outlined-adornment-password"
-        type={showPassword ? 'text' : 'password'}
-        name="password"
-        size="small"
-        endAdornment={
-          <InputAdornment position="end">
-            <IconButton
-              onClick={handleClickShowPassword}
-              onMouseDown={handleMouseDownPassword}
-              edge="end"
-              size="small"
-            >
-              {showPassword ? <VisibilityOff fontSize="inherit" /> : <Visibility fontSize="inherit" />}
-            </IconButton>
-          </InputAdornment>
-        }
-        label="Password"
-      />
-    </FormControl>
-  );
-}
-
-function CustomButton() {
-  return (
-    <Button type="submit" variant="outlined" color="info" size="small" fullWidth sx={{ my: 2 }}>
-      Log In
-    </Button>
-  );
-}
-
-function SignUpLink() {
-  return (
-    <>
-      <span>New user..? </span>
-      <Link href="/register" variant="body2" underline="none">Register</Link>
-    </>
-  );
-}
-
-function ForgotPasswordLink() {
-  return (
-    <Box textAlign="center">
-      <Link href="/forget-password" variant="body2">Forgot password?</Link>
-    </Box>
-  );
-}
-
-function Title() {
-  return (
-    <Typography component="div">
-      <Box sx={{ fontFamily: 'Monospace', fontSize: 'h4.fontSize', fontWeight: 'bold', m: 1 }}>
-        LOGIN
-      </Box>
-    </Typography>
-  );
-}
-
-export default function Login() {
-  const theme = useTheme();
-  const { login } = useContext(AuthContext);
-  const navigate = useNavigate();
-  const [snackbar, setSnackbar] = useState({
-      open: false,
-      message: "",
-      severity: "success",
-    });
-
-     const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
-  const handleLogin = async (provider, formData,event) => {
-    event.preventDefault; 
-    const email = formData.get('email');
-    const password = formData.get('password');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const email = data.get('email');
+    const password = data.get('password');
 
     try {
       await login(email, password);
-
-      showSnackbar("Login successful!", "success");
-
+      showSnackbar('Welcome back! Login successful.', 'success');
+      
       setTimeout(() => {
-      navigate("/");
-    }, 500);
-
+        navigate('/dashboard');
+      }, 600);
     } catch (error) {
-      showSnackbar(`${error.response?.data?.message || error.message}`, "error");
-
+      showSnackbar(`${error.response?.data?.message || error.message}`, 'error');
     }
   };
 
   return (
-    <AppProvider theme={theme}>
-      <SignInPage
-        signIn={handleLogin}
-        slots={{
-          title: Title,
-          emailField: CustomEmailField,
-          passwordField: CustomPasswordField,
-          submitButton: CustomButton,
-          signUpLink: SignUpLink,
-          forgotPasswordLink: ForgotPasswordLink,
-        }}
-        slotProps={{ form: { noValidate: true } }}
-        providers={providers}
-      />
-      <Snackbar
-              open={snackbar.open}
-              autoHideDuration={3000}
-              onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-              anchorOrigin={{ vertical: "top", horizontal: "center" }}
-            >
-              <Alert
-                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-                severity={snackbar.severity}
-                sx={{ width: "100%" }}
+    <ThemeProvider theme={loginTheme}>
+      <CssBaseline />
+      <Grid container sx={{ minHeight: '100vh' }}>
+        
+        
+        <Grid
+          item
+          xs={false}
+          sm={4}
+          md={7}
+          sx={{
+            background: 'radial-gradient(circle at 30% 30%, #115e5944 0%, #020617 80%)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 4,
+            borderRight: '1px solid #1e293b',
+          }}
+        >
+          <Box sx={{ maxWidth: '440px', textAlign: 'center' }}>
+          
+            <Box
+              component="img"
+              src="/logo_img_WOB.png"
+              alt="ArgusCode Logo"
+              sx={{
+                width: '100%',
+                maxHeight: '280px',
+                objectFit: 'contain',
+                borderRadius: 4,
+                mb: 4,
+                boxShadow: '0 20px 40px -15px rgba(0,0,0,0.7)',
+              }}
+            />
+            <Typography variant="h4" sx={{ fontWeight: '800', mb: 1, letterSpacing: 1 }}>
+              ARGUS<span style={{ color: '#14b8a6' }}>CODE</span>
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
+              The comprehensive hundred-eyed platform keeping watch over your repository workspace in real time.
+            </Typography>
+          </Box>
+        </Grid>
+
+      
+        <Grid
+          item
+          xs={12}
+          sm={8}
+          md={5}
+          component={Paper}
+          elevation={0}
+          square
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            position: 'relative',
+            px: { xs: 3, sm: 6, md: 8 },
+            bgcolor: '#0f172a',
+          }}
+        >
+      
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/')}
+            sx={{
+              position: 'absolute',
+              top: 24,
+              left: { xs: 16, sm: 40 },
+              textTransform: 'none',
+              color: 'text.secondary',
+              '&:hover': { color: 'primary.main' },
+            }}
+          >
+            Back to Home
+          </Button>
+
+          <Box sx={{ width: '100%', maxWidth: '400px', mx: 'auto', my: 'auto' }}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                Sign In
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Securely log into your collaborative programming console.
+              </Typography>
+            </Box>
+
+            <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <MailOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+
+              
+              <FormControl sx={{ mt: 2, mb: 1 }} fullWidth variant="outlined" required>
+                <InputLabel htmlFor="outlined-adornment-password">Password</InputLabel>
+                <OutlinedInput
+                  id="outlined-adornment-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <LockOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  }
+                  endAdornment={
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  }
+                  label="Password"
+                />
+              </FormControl>
+
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                <Link
+                  href="/forgot-password"
+                  variant="body2"
+                  underline="hover"
+                  sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                >
+                  Forgot password?
+                </Link>
+              </Box>
+
+          
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                size="large"
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 'bold',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  mb: 3,
+                  boxShadow: '0 4px 12px rgba(20, 184, 166, 0.2)',
+                }}
               >
-                {snackbar.message}
-              </Alert>
-            </Snackbar>
-    </AppProvider>
+                Sign In to Platform
+              </Button>
+
+            
+              <Typography variant="body2" align="center" sx={{ color: 'text.secondary' }}>
+                New user?{' '}
+                <Link
+                  href="/register"
+                  underline="none"
+                  sx={{ color: 'primary.main', fontWeight: '600', '&:hover': { underline: 'hover' } }}
+                >
+                  Register an account
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+      </Grid>
+
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </ThemeProvider>
   );
 }

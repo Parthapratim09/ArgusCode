@@ -3,9 +3,9 @@ import File from "../models/Files.js";
 
 export const createFile = async (req, res) => {
   try {
-    const { roomId, name, content = "" } = req.body;
+    const { roomId, name, content = "",parentId=null,type="file" } = req.body;
     const language = detectLanguageFromName(name);
-    const file = await File.create({ roomId, name, content, language, owner: req.user.id });
+    const file = await File.create({ roomId, name,language, owner: req.user.id,parentId,type,content:type==="file"?content:""});
 
   
     try {
@@ -21,6 +21,19 @@ export const createFile = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
+export const createFolder = async (req,res)=>{
+  try{
+    const {roomId,name,parentId=null}=req.body;
+    const folder=await File.create({roomId,name,type:"folder",owner:req.user.id,parentId});
+    req.app.locals.io?.to(`room-${roomId}`).emit(`file-created:${roomId}`, folder);
+    return  res.status(201).json(folder);
+  }catch(err){
+    console.error("createFolder error:", err);
+    return res.status(500).json({ message: err.message });
+  }
+}
+
 
 
 
@@ -67,7 +80,6 @@ export const updateFile = async (req, res) => {
 
     const updates = {};
     if (typeof content !== "undefined") updates.content = content;
-    // if (typeof name !== "undefined") updates.name = name;
     updates.edited = true;
     updates.updatedAt = Date.now();
 

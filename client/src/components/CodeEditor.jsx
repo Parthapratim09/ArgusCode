@@ -1,19 +1,27 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState,useContext  } from "react";
 import Editor from "@monaco-editor/react";
 import api from "../api/axios.js"; 
 import { Button, Select, MenuItem, Typography } from "@mui/material";
+import { io } from "socket.io-client";
+import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { MonacoBinding } from "y-monaco";
 import * as monaco from "monaco-editor";
+import { AuthContext } from "../context/authContext.jsx";
+import { canEdit } from "../utils/permissions";
 
 
-export default function CodeEditor({ file, onSaved }) {
+export default function CodeEditor({ file, onSaved,selectedRoom }) {
+  const { user } = useContext(AuthContext);
+  const isEditable = canEdit(selectedRoom, user?._id || user?.id);
   const [language, setLanguage] = useState("javascript");
   const [status, setStatus] = useState("idle"); 
   const [isDirty, setIsDirty] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [currentRole, setCurrentRole] = useState("viewer");
 
   // Monaco refs
   const editorRef = useRef(null);
@@ -23,6 +31,7 @@ export default function CodeEditor({ file, onSaved }) {
   const bindingRef = useRef(null);
   const yjsConnectionsRef = useRef(new Map());
 
+ const socketRef = useRef(null);
 
   const savingRef = useRef(false);
   const dirtyDebounceRef = useRef(null);
@@ -45,6 +54,46 @@ export default function CodeEditor({ file, onSaved }) {
     onSavedRef.current = onSaved;
     useYjsRef.current = useYjs;
   }, [file, onSaved, useYjs]);
+
+  useEffect(() => {
+
+  socketRef.current = io(
+    import.meta.env.VITE_API_SOCKET_URL,
+    {
+      auth: {
+        userId: localStorage.getItem("userId"),
+        userName: localStorage.getItem("userName"),
+      },
+    }
+  );
+
+  return () => {
+
+  socketRef.current?.emit("user-left", {
+    userName: localStorage.getItem("userName"),
+    roomId: file?.roomId,
+  });
+
+  socketRef.current?.disconnect();
+};
+
+}, []);
+
+useEffect(() => {
+
+  if (!socketRef.current || !file?._id) return;
+
+  
+  socketRef.current.emit("join-file", {
+    fileId: file._id,
+  });
+
+  
+  socketRef.current.emit("join-room", file.roomId);
+
+  console.log("Joining room:", file.roomId);
+
+}, [file]);
 
   const extToLang = {
     py: "python", js: "javascript", ts: "typescript", java: "java",
@@ -164,6 +213,96 @@ provider.on('sync', (isSynced) => {
   
   }, [file, editorReady, useYjs, yjsUrl]);
 
+useEffect(() => {
+
+  if (!socketRef.current || !file) return;
+
+  console.log("Joining user room:", localStorage.getItem("userId"));
+  console.log("file Data:", file);
+
+  console.log("USERNAME:", localStorage.getItem("userName"));
+console.log("USER ID:", localStorage.getItem("userId"));
+
+console.log("Sending online user:", {
+  roomId: file.roomId,
+  userName: localStorage.getItem("userName"),
+});
+
+  socketRef.current.emit("user-online", {
+    roomId: file?.roomId,
+    userName: localStorage.getItem("userName"),
+  });
+
+  setOnlineUsers((prev) => {
+
+  const me = localStorage.getItem("userName");
+
+  if (prev.includes(me)) return prev;
+
+  return [...prev, me];
+
+});
+
+  
+  socketRef.current.on("online-user", ({ userName }) => {
+
+    console.log("ONLINE USERS RECEIVED:", userName);
+
+    setOnlineUsers((prev) => {
+
+      if (prev.includes(userName)) return prev;
+
+      return [...prev, userName];
+
+    });
+
+  });
+
+
+  socketRef.current.on("remove-online-user", ({ userName }) => {
+
+    setOnlineUsers((prev) =>
+      prev.filter((u) => u !== userName)
+    );
+
+  });
+
+  return () => {
+
+    socketRef.current?.off("online-user");
+    socketRef.current?.off("remove-online-user");
+
+  };
+
+}, [file]);
+
+
+useEffect(() => {
+
+  if (!file?._id) return;
+
+  const connection = yjsConnectionsRef.current.get(file._id);
+
+  if (!connection) return;
+
+  const { provider } = connection;
+
+  const userName = localStorage.getItem("userName");
+
+  const colorMap = {
+    a: "#ff4d4f",
+    p: "#52c41a",
+  };
+
+  provider.awareness.setLocalState({
+    user: {
+      name: userName,
+      color: colorMap[userName] || "#3b82f6",
+    },
+  });
+
+}, [file]);
+
   
   function handleEditorDidMount(editor, monacoInstance) {
     editorRef.current = editor;
@@ -177,16 +316,31 @@ provider.on('sync', (isSynced) => {
         modelRef.current.setValue(file.content ?? "");
       } catch (e) {}
     }
-    editor.onDidChangeModelContent(() => {
-      if (dirtyDebounceRef.current) clearTimeout(dirtyDebounceRef.current);
-      dirtyDebounceRef.current = setTimeout(() => setIsDirty(true), 200);
-    });
+
+editor.onDidChangeModelContent(() => {
+
+  if (!isEditable) return;
+
+  if (dirtyDebounceRef.current) {
+    clearTimeout(dirtyDebounceRef.current);
+  }
+
+  dirtyDebounceRef.current = setTimeout(() => {
+    setIsDirty(true);
+  }, 200);
+
+
+
+});
     startAutosave();
     setEditorReady(true);
   }
 
 
   async function handleSave() {
+
+    if (!isEditable) return;
+
     const currentFile = fileRef.current;
     
     if (!currentFile || !currentFile._id) { 
@@ -266,7 +420,10 @@ provider.on('sync', (isSynced) => {
   
   const [output, setOutput] = useState("Output will appear here...");
   const runCode = async () => {
-    setOutput("⏳ Running code...");
+    if (!isEditable) return;
+    
+    setOutput(<><HourglassTopIcon  /> Running code...</>);
+    
     try {
       const langMap = {
         "javascript": 93, "python": 71, "c": 50, "cpp": 54, "java": 62
@@ -316,7 +473,7 @@ provider.on('sync', (isSynced) => {
         <Typography variant="h6">{file?.name || "No file selected"}</Typography>
         <div className="flex gap-3 items-center">
           <Select size="small" value={language} onChange={handleLanguageChange}
-            sx={{ bgcolor: "#1e293b", color: "white", "& .MuiSvgIcon-root": { color: "white" } }}>
+            sx={{ bgcolor: "#1e293b", color: "white", "& .MuiSvgIcon-root": { color: "white" } }} disabled={true}>
             <MenuItem value="javascript">JavaScript</MenuItem>
             <MenuItem value="python">Python</MenuItem>
             <MenuItem value="typescript">TypeScript</MenuItem>
@@ -327,22 +484,25 @@ provider.on('sync', (isSynced) => {
             <MenuItem value="ruby">Ruby</MenuItem>
           </Select>
 
-          <Button onClick={handleSave} variant="outlined" sx={{ color: "white", borderColor: "#334155" }} disabled={status === "saving"}>
+          <Button onClick={handleSave} variant="outlined" sx={{ color: "white", borderColor: "#334155" }} disabled={!isEditable || status === "saving"}>
             {status === 'saving' ? 'Saving...' : status === 'saved' ? 'Saved!' : 'Save'}
           </Button>
 
-          <Button onClick={runCode} variant="contained" sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" } }}>
+          <Button onClick={runCode} variant="contained"  disabled={!isEditable}  sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" }}}>
             Run Code
           </Button>
         </div>
       </div>
-
+      <div className="px-4 py-1 text-xs text-green-400 bg-slate-900 border-b border-slate-700">
+  Online: {onlineUsers.join(", ")}
+</div>
+      
       <Editor
         height="60vh"
         theme="vs-dark"
         language={language}
         onMount={handleEditorDidMount}
-        options={{ automaticLayout: true, fontSize: 14, minimap: { enabled: false } }}
+        options={{ automaticLayout: true, fontSize: 14, minimap: { enabled: false }, readOnly: !isEditable }}
       />
 
       <div className="bg-slate-900 text-green-400 p-4 border-t border-slate-800 font-mono">

@@ -1,5 +1,6 @@
 import Room from "../models/Room.js";
 import {nanoid} from "nanoid";
+import mongoose from "mongoose";
 
 
 async function generateUniqueRoomId(len = 6) {
@@ -24,6 +25,7 @@ export const createRoom= async(req,res)=>{
         const newRoom = new Room({ name,
              defaultLanguage, 
              isPrivate, 
+             users:[],
              roomId, 
              owner: req.user.id,
              slug });
@@ -38,11 +40,13 @@ export const createRoom= async(req,res)=>{
 export const getRoom= async(req,res)=>{
     try{
         const { roomId } = req.params;
-        const room = await Room.findOne({ roomId }).populate('owner', 'name email').populate('users', 'name email');
+        const room = await Room.findOne({ roomId }).populate('owner', 'name email').populate('users.user', 'name email');
+        const myRole =room.owner.toString() === req.user.id? "owner": room.users.find(u => u.user._id.toString() === req.user.id)?.role || null;
+
         if(!room){
             return res.status(404).json({ message: "Room not found" });
         }
-        res.status(200).json({ room });
+        res.status(200).json({ room,myRole});
     }catch(error){
         res.status(500).json({ message: "Error fetching room", error });
     }
@@ -50,14 +54,33 @@ export const getRoom= async(req,res)=>{
 export const joinRoom= async(req,res)=>{
     try{
         const { roomId } = req.params;
+        const userId = req.user.id;
         const room = await Room.findOne({ roomId });
         if(!room){
             return res.status(404).json({ message: "Room not found" });
         }
-        if(!room.users.includes(req.user.id)){
-            room.users.push(req.user.id);
-            await room.save();
-        }   
+        const isOwner = room.owner.toString() === req.user.id;
+    const isMember = room.users.some((m) => m.user.toString() === req.user.id);
+         
+        if(isOwner){
+          return res.status(200).json({ message: "You are The Owner", room ,myRole: "owner"});
+        }
+        if (!isMember) {
+      room.users.push({ 
+        user: req.user.id,
+        role: "viewer" 
+      });
+      await room.save();
+      await room.populate("users.user","name email");
+
+      req.app.locals.io?.to(`room-${roomId}`).emit(
+        "room-user-joined",
+        {
+          roomId,
+          user:room.users.at(-1)
+        }
+      );
+    }
         res.status(200).json({ message: "Joined room successfully", room });
     }catch(error){
         res.status(500).json({ message: "Error joining room", error });
@@ -85,6 +108,11 @@ export const deleteRoom = async (req, res) => {
       });
     }
 
+    await mongoose.model("File").deleteMany({
+  roomId: room.roomId,
+});
+
+
     await Room.findByIdAndDelete(id);
     return res.json({ message: "Room deleted successfully" });
   } catch (error) {
@@ -98,9 +126,8 @@ export const getAllRooms = async (req, res) => {
     const userId = req.user.id;
     
     const rooms = await Room.find({
-      $or: [{ owner: userId }, { users: userId }]
-    }).populate('owner', 'name email').populate('users', 'name email');
-
+      $or: [{ owner: userId }, { "users.user": userId }]
+    }).populate('owner', 'name email').populate('users.user', 'name email');
     return res.json(rooms);
   } catch (err) {
     console.error("getAllRooms error:", err);
@@ -123,9 +150,16 @@ export const leaveRoom = async (req, res) => {
     }
 
     
-    room.users = room.users.filter(userId => userId.toString() !== req.user.id);
+      room.users = room.users.filter(
+    (member) => member.user.toString() !== req.user.id
+  );
     await room.save();
-
+    req.app.locals.io
+    ?.to(`room-${roomId}`)
+    .emit("room-user-left", {
+    roomId,
+    userId: req.user.id,
+  });
     return res.status(200).json({ message: "You left the room successfully" });
 
   } catch (error) {
@@ -133,3 +167,52 @@ export const leaveRoom = async (req, res) => {
     return res.status(500).json({ message: "Error leaving room" });
   }
 };
+
+export const updateUserRole = async (req, res) => {
+  const { roomId } = req.params;
+  const { userId, role } = req.body;
+
+  if (!["editor", "viewer"].includes(role)) {
+    return res.status(400).json({ message: "Invalid role" });
+  }
+
+  const room = await Room.findOne({ roomId });
+  if (!room) return res.status(404).json({ message: "Room not found" });
+  
+  if (room.owner.toString() !== req.user.id) {
+  return res.status(403).json({ message: "Only owner can change roles" });
+}
+
+  const member = room.users.find(
+    (u) => u.user.toString() === userId
+  );
+
+  if (!member) {
+    return res.status(404).json({ message: "User not in room" });
+  }
+
+  member.role = role;
+  await room.save();
+
+  res.json({ message: "Role updated successfully" });
+};
+
+export const kickUserFromRoom = async (req,res)  =>{
+  const {roomId}=req.params;
+  const userId=req.body.userId;
+
+  const room= await Room.findOne({roomId});
+  if(!room) return res.status(404).json({message:"Room not found"});
+
+  if(room.owner.toString() === userId){
+    return res.status(403).json({message:"Cannot Kick Owner"});
+  }
+
+  room.users= room.users.filter(
+    (m) => m.user.toString() !== userId
+  );
+  await room.save();
+  req.app.locals.io.to(userId).emit("kicked-from-room",{roomId});
+
+  res.json({message:"User Kicked Successfully"});
+}

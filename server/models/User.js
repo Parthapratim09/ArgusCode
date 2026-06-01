@@ -7,7 +7,30 @@ const userSchema = new mongoose.Schema({
             unique: true , 
             match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email format"]
           },
-  password: { type: String, equired: [true, "Password is required"]  },
+  password: { type: String, required: [true, "Password is required"]  },
+   role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user",
+  },
+
+  isBanned: {
+    type: Boolean,
+    default: false,
+  },
+  banReason: {
+  type: String,
+  default: "",
+},
+isVerified:{
+  type:Boolean,
+  required:true,
+  default:false
+},
+  verificationCode:{
+    type:String,
+    default:null
+  },
   createdAt: { type: Date, default: Date.now },
 
 });
