@@ -22,14 +22,17 @@ const sendEmail = async (email, verificationCode) => {
     user: process.env.BREVO_SMTP_USER,
     pass: process.env.BREVO_SMTP_PASS,
   },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
 });
 
 
 
     try {
 
-        await transporter.verify();
-console.log("Brevo SMTP Connected");
+//         await transporter.verify();
+// console.log("Brevo SMTP Connected");
         const info = await transporter.sendMail({
             from: `"ArgusCode Platform" <${brevoMail}>`,
             to: email,
