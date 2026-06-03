@@ -8,9 +8,9 @@ const sendEmail = async (email, verificationCode) => {
     // const emailPass = process.env.nodemailer_password;  
     const brevoMail = process.env.BREVO_MAIL;
 
-    if (!emailUser || !emailPass) {
-        throw new Error("Nodemailer environment variables are missing at invocation time.");
-    }
+    // if (!emailUser || !emailPass) {
+    //     throw new Error("Nodemailer environment variables are missing at invocation time.");
+    // }
 
     dns.setDefaultResultOrder("ipv4first");
 
