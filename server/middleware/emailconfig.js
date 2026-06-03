@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import { email_template } from "../lib/emailTemp.js";
+import dns from "dns";
+
 
 const sendEmail = async (email, verificationCode) => {
     const emailUser = process.env.nodemailer_email;
@@ -9,11 +11,14 @@ const sendEmail = async (email, verificationCode) => {
         throw new Error("Nodemailer environment variables are missing at invocation time.");
     }
 
+    dns.setDefaultResultOrder("ipv4first");
+
+
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
-        port: 587,
+        port: 465,
         secure: false, 
-        family: 4,
+        // family: 4,
         auth: {
             user: emailUser,
             pass: emailPass,
