@@ -14,6 +14,9 @@ const sendEmail = async (email, verificationCode) => {
 
     dns.setDefaultResultOrder("ipv4first");
 
+    console.log("SMTP_USER:", process.env.BREVO_SMTP_USER);
+console.log("BREVO_MAIL:", process.env.BREVO_MAIL);
+
     const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
