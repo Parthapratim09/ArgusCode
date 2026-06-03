@@ -4,8 +4,9 @@ import dns from "dns";
 
 
 const sendEmail = async (email, verificationCode) => {
-    const emailUser = process.env.nodemailer_email;
-    const emailPass = process.env.nodemailer_password;
+    // const emailUser = process.env.nodemailer_email;
+    // const emailPass = process.env.nodemailer_password;  
+    const brevoMail = process.env.BREVO_MAIL;
 
     if (!emailUser || !emailPass) {
         throw new Error("Nodemailer environment variables are missing at invocation time.");
@@ -13,21 +14,22 @@ const sendEmail = async (email, verificationCode) => {
 
     dns.setDefaultResultOrder("ipv4first");
 
-
     const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: false, 
-        // family: 4,
-        auth: {
-            user: emailUser,
-            pass: emailPass,
-        },
-    });
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_PASS,
+  },
+});
+
+await transporter.verify();
+console.log("Brevo SMTP Connected");
 
     try {
         const info = await transporter.sendMail({
-            from: `"ArgusCode Platform" <${emailUser}>`,
+            from: `"ArgusCode Platform" <${brevoMail}>`,
             to: email,
             subject: "Verify Your Email Address",
             text: `Your verification code is: ${verificationCode}`,
