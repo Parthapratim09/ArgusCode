@@ -24,10 +24,12 @@ const sendEmail = async (email, verificationCode) => {
   },
 });
 
-await transporter.verify();
-console.log("Brevo SMTP Connected");
+
 
     try {
+
+        await transporter.verify();
+console.log("Brevo SMTP Connected");
         const info = await transporter.sendMail({
             from: `"ArgusCode Platform" <${brevoMail}>`,
             to: email,
