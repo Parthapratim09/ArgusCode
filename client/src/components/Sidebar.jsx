@@ -686,7 +686,7 @@ console.log("Room owner ID:", room.owner?._id, "Current user ID:", currentUserId
                       
                       {isOwner ? (
                       <>
-                        <Button
+                        {/* <Button
                           size="small"
                           variant="outlined"
                           style={{ marginRight: '10px', padding: '19px' }}
@@ -701,7 +701,32 @@ console.log("Room owner ID:", room.owner?._id, "Current user ID:", currentUserId
                           }}
                         >
                           Collaborators
-                        </Button>
+                        </Button> */}
+
+                        <Button
+  size="small"
+  variant="outlined"
+  style={{ marginRight: "10px", padding: "19px" }}
+  onClick={async (e) => {
+    e.stopPropagation();
+
+    try {
+      const res = await api.get(`/rooms/${room.roomId}`);
+
+      setCollaborators([
+        { user: res.data.room.owner, role: "owner" },
+        ...(res.data.room.users || []),
+      ]);
+
+      setCollabOpen(true);
+    } catch (err) {
+      console.error(err);
+      showSnackbar("Failed to load collaborators", "error");
+    }
+  }}
+>
+  Collaborators
+</Button>
 
                       <Button
                       size="small"

@@ -37,55 +37,172 @@ export const createRoom= async(req,res)=>{
     }
 }
 
-export const getRoom= async(req,res)=>{
-    try{
-        const { roomId } = req.params;
-        const room = await Room.findOne({ roomId }).populate('owner', 'name email').populate('users.user', 'name email');
-        const myRole =room.owner.toString() === req.user.id? "owner": room.users.find(u => u.user._id.toString() === req.user.id)?.role || null;
+// export const getRoom= async(req,res)=>{
+//     try{
+//         const { roomId } = req.params;
+//         const room = await Room.findOne({ roomId }).populate('owner', 'name email').populate('users.user', 'name email');
+//         const myRole =room.owner.toString() === req.user.id? "owner": room.users.find(u => u.user._id.toString() === req.user.id)?.role || null;
 
-        if(!room){
-            return res.status(404).json({ message: "Room not found" });
-        }
-        res.status(200).json({ room,myRole});
-    }catch(error){
-        res.status(500).json({ message: "Error fetching room", error });
-    }
-}
-export const joinRoom= async(req,res)=>{
-    try{
-        const { roomId } = req.params;
-        const userId = req.user.id;
-        const room = await Room.findOne({ roomId });
-        if(!room){
-            return res.status(404).json({ message: "Room not found" });
-        }
-        const isOwner = room.owner.toString() === req.user.id;
-    const isMember = room.users.some((m) => m.user.toString() === req.user.id);
-         
-        if(isOwner){
-          return res.status(200).json({ message: "You are The Owner", room ,myRole: "owner"});
-        }
-        if (!isMember) {
-      room.users.push({ 
-        user: req.user.id,
-        role: "viewer" 
+//         if(!room){
+//             return res.status(404).json({ message: "Room not found" });
+//         }
+//         res.status(200).json({ room,myRole});
+//     }catch(error){
+//         res.status(500).json({ message: "Error fetching room", error });
+//     }
+// }
+
+export const getRoom = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const room = await Room.findOne({ roomId })
+      .populate("owner", "name email")
+      .populate("users.user", "name email");
+
+    if (!room) {
+      return res.status(404).json({
+        message: "Room not found",
       });
+    }
+
+    const myRole =
+      room.owner._id.toString() === req.user.id
+        ? "owner"
+        : room.users.find(
+            (u) => u.user?._id?.toString() === req.user.id
+          )?.role || null;
+
+    return res.status(200).json({
+      room,
+      myRole,
+    });
+
+  } catch (error) {
+    console.error("getRoom error:", error);
+
+    return res.status(500).json({
+      message: "Error fetching room",
+      error: error.message,
+    });
+  }
+};
+// export const joinRoom= async(req,res)=>{
+//     try{
+//         const { roomId } = req.params;
+//         const userId = req.user.id;
+//         const room = await Room.findOne({ roomId });
+//         if(!room){
+//             return res.status(404).json({ message: "Room not found" });
+//         }
+//         const isOwner = room.owner.toString() === req.user.id;
+//     const isMember = room.users.some((m) => m.user.toString() === req.user.id);
+         
+//         if(isOwner){
+//           return res.status(200).json({ message: "You are The Owner", room ,myRole: "owner"});
+//         }
+//         if (!isMember) {
+//       room.users.push({ 
+//         user: req.user.id,
+//         role: "viewer" 
+//       });
+//       await room.save();
+//       const updatedRoom = await Room.findOne({ roomId })
+//   .populate("owner", "name email")
+//   .populate("users.user", "name email")
+
+//       req.app.locals.io?.to(`room-${roomId}`).emit(
+//         "room-user-joined",
+//         {
+//           roomId,
+//           user:updatedRoom.users.at(-1)
+//         }
+//       );
+//     }
+//         res.status(200).json({ message: "Joined room successfully", room });
+//     }catch(error){
+//         res.status(500).json({ message: "Error joining room", error });
+//     }
+// }
+
+export const joinRoom = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const room = await Room.findOne({ roomId });
+
+    if (!room) {
+      return res.status(404).json({
+        message: "Room not found",
+      });
+    }
+
+    const isOwner = room.owner.toString() === req.user.id;
+
+    const isMember = room.users.some(
+      (m) => m.user.toString() === req.user.id
+    );
+
+    
+    if (isOwner) {
+      const populatedRoom = await Room.findOne({ roomId })
+        .populate("owner", "name email")
+        .populate("users.user", "name email");
+
+      return res.status(200).json({
+        message: "You are the owner",
+        room: populatedRoom,
+        myRole: "owner",
+      });
+    }
+
+    
+    if (!isMember) {
+      room.users.push({
+        user: req.user.id,
+        role: "viewer",
+      });
+
       await room.save();
-      await room.populate("users.user","name email");
+
+      const updatedRoom = await Room.findOne({ roomId })
+        .populate("owner", "name email")
+        .populate("users.user", "name email");
 
       req.app.locals.io?.to(`room-${roomId}`).emit(
         "room-user-joined",
         {
           roomId,
-          user:room.users.at(-1)
+          user: updatedRoom.users.at(-1),
         }
       );
     }
-        res.status(200).json({ message: "Joined room successfully", room });
-    }catch(error){
-        res.status(500).json({ message: "Error joining room", error });
-    }
-}
+
+    
+    const finalRoom = await Room.findOne({ roomId })
+      .populate("owner", "name email")
+      .populate("users.user", "name email");
+
+    const myRole =
+      finalRoom.users.find(
+        (u) => u.user?._id?.toString() === req.user.id
+      )?.role || "viewer";
+
+    return res.status(200).json({
+      message: "Joined room successfully",
+      room: finalRoom,
+      myRole,
+    });
+
+  } catch (error) {
+    console.error("joinRoom error:", error);
+
+    return res.status(500).json({
+      message: "Error joining room",
+      error: error.message,
+    });
+  }
+};
 
 export const updateRoom = async (req, res) => {
   const updated = await Room.findByIdAndUpdate(req.params.id, req.body, { new: true });
